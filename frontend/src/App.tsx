@@ -5,10 +5,12 @@ import TOTPCard from "./components/TOTPCard";
 import DeleteModal from "./components/DeleteModal";
 import AddModal from "./components/AddModal";
 import ImportModal from "./components/ImportModal";
+import AuthScreen from "./components/AuthScreen";
 import { GetEntries, AddEntry, DeleteEntry } from "../wailsjs/go/core/EntryHandler";
 import { ImportFromURI } from "../wailsjs/go/core/ImportHandler";
 
 function App() {
+  const [authenticated, setAuthenticated] = useState(false);
   const [entries, setEntries] = useState<EntryWithCode[]>([]);
   const [search, setSearch] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
@@ -25,10 +27,11 @@ function App() {
   }, [search]);
 
   useEffect(() => {
+    if (!authenticated) return;
     refresh();
     const interval = setInterval(refresh, 1000);
     return () => clearInterval(interval);
-  }, [refresh]);
+  }, [refresh, authenticated]);
 
   const handleAdd = async (issuer: string, name: string, secret: string) => {
     try {
@@ -67,6 +70,10 @@ function App() {
   const handleCopy = (code: string) => {
     navigator.clipboard.writeText(code).catch(console.error);
   };
+
+  if (!authenticated) {
+    return <AuthScreen onAuthenticated={() => setAuthenticated(true)} />;
+  }
 
   return (
     <div className="min-h-screen bg-white flex flex-col">

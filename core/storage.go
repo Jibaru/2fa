@@ -12,6 +12,7 @@ type Storage struct {
 	mu      sync.RWMutex
 	entries []Entry
 	path    string
+	key     []byte
 }
 
 func NewStorage() *Storage {
@@ -20,28 +21,57 @@ func NewStorage() *Storage {
 	os.MkdirAll(dir, 0700)
 	path := filepath.Join(dir, "data.json")
 
-	s := &Storage{path: path}
-	s.load()
-	return s
+	return &Storage{path: path}
 }
 
-func (s *Storage) load() {
-	data, err := os.ReadFile(s.path)
+func (s *Storage) SetKey(key []byte) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.key = key
+}
+
+func (s *Storage) Load() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	raw, err := os.ReadFile(s.path)
 	if err != nil {
 		s.entries = []Entry{}
 		return
 	}
-	if err := json.Unmarshal(data, &s.entries); err != nil {
+
+	var jsonData []byte
+	if s.key != nil {
+		decrypted, err := Decrypt(string(raw), s.key)
+		if err != nil {
+			s.entries = []Entry{}
+			return
+		}
+		jsonData = decrypted
+	} else {
+		jsonData = raw
+	}
+
+	if err := json.Unmarshal(jsonData, &s.entries); err != nil {
 		s.entries = []Entry{}
 	}
 }
 
 func (s *Storage) save() error {
-	data, err := json.MarshalIndent(s.entries, "", "  ")
+	jsonData, err := json.MarshalIndent(s.entries, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(s.path, data, 0600)
+
+	if s.key != nil {
+		encrypted, err := Encrypt(jsonData, s.key)
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(s.path, []byte(encrypted), 0600)
+	}
+
+	return os.WriteFile(s.path, jsonData, 0600)
 }
 
 func (s *Storage) GetEntries() []Entry {

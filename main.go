@@ -17,6 +17,7 @@ var assets embed.FS
 func main() {
 	app := NewApp()
 	storage := core.NewStorage()
+	authHandler := core.NewAuthHandler(storage)
 	entryHandler := core.NewEntryHandler(storage)
 	importHandler := core.NewImportHandler(storage)
 
@@ -30,10 +31,12 @@ func main() {
 		BackgroundColour: &options.RGBA{R: 255, G: 255, B: 255, A: 1},
 		OnStartup: func(ctx context.Context) {
 			app.startup(ctx)
+			authHandler.Startup(ctx)
 			entryHandler.Startup(ctx)
 			importHandler.Startup(ctx)
 		},
 		Bind: []interface{}{
+			authHandler,
 			entryHandler,
 			importHandler,
 		},

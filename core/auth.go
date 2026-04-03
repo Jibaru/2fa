@@ -88,3 +88,44 @@ func (h *AuthHandler) Login(password string) error {
 
 	return nil
 }
+
+func (h *AuthHandler) ChangePassword(currentPassword string, newPassword string) error {
+	if len(newPassword) != 16 {
+		return fmt.Errorf("new password must be exactly 16 characters")
+	}
+
+	data, err := os.ReadFile(h.configPath)
+	if err != nil {
+		return fmt.Errorf("failed to read config: %w", err)
+	}
+
+	var config Config
+	if err := json.Unmarshal(data, &config); err != nil {
+		return fmt.Errorf("failed to parse config: %w", err)
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(config.PasswordHash), []byte(currentPassword)); err != nil {
+		return fmt.Errorf("current password is incorrect")
+	}
+
+	if err := h.storage.ReKey([]byte(newPassword)); err != nil {
+		return fmt.Errorf("failed to re-encrypt data: %w", err)
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	config.PasswordHash = string(hash)
+	configData, err := json.MarshalIndent(config, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal config: %w", err)
+	}
+
+	if err := os.WriteFile(h.configPath, configData, 0600); err != nil {
+		return fmt.Errorf("failed to write config: %w", err)
+	}
+
+	return nil
+}

@@ -74,6 +74,13 @@ func (s *Storage) save() error {
 	return os.WriteFile(s.path, jsonData, 0600)
 }
 
+func (s *Storage) ReKey(newKey []byte) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.key = newKey
+	return s.save()
+}
+
 func (s *Storage) GetEntries() []Entry {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

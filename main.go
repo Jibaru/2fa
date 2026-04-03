@@ -14,12 +14,18 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
+//go:embed build/windows/icon.ico
+var trayIcon []byte
+
 func main() {
 	app := NewApp()
 	storage := core.NewStorage()
 	authHandler := core.NewAuthHandler(storage)
 	entryHandler := core.NewEntryHandler(storage)
 	importHandler := core.NewImportHandler(storage)
+	trayManager := core.NewTrayManager(trayIcon)
+
+	trayManager.Start()
 
 	err := wails.Run(&options.App{
 		Title:  "2FA Authenticator",
@@ -34,6 +40,10 @@ func main() {
 			authHandler.Startup(ctx)
 			entryHandler.Startup(ctx)
 			importHandler.Startup(ctx)
+			trayManager.Startup(ctx)
+		},
+		OnBeforeClose: func(ctx context.Context) (prevent bool) {
+			return trayManager.OnBeforeClose(ctx)
 		},
 		Bind: []interface{}{
 			authHandler,

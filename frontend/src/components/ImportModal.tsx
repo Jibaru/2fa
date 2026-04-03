@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
+import jsQR from "jsqr";
 
 interface ImportModalProps {
   onImport: (uri: string) => void;
@@ -51,19 +52,91 @@ export default function ImportModal({ onImport, onClose }: ImportModalProps) {
     };
   }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const scanFileAttempt = async (file: File): Promise<string> => {
+    const scanner = new Html5Qrcode("qr-file-reader");
+    try {
+      const result = await scanner.scanFile(file, false);
+      return result;
+    } finally {
+      try { scanner.clear(); } catch { /* ignore */ }
+    }
+  };
+
+  const prepareImage = (file: File): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(img.src);
+        const size = 1200;
+        const canvas = document.createElement("canvas");
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext("2d")!;
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, size, size);
+        const scale = Math.min((size * 0.85) / img.width, (size * 0.85) / img.height);
+        const w = img.width * scale;
+        const h = img.height * scale;
+        ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+        canvas.toBlob(
+          (blob) => blob
+            ? resolve(new File([blob], "qr.png", { type: "image/png" }))
+            : reject(new Error("canvas failed")),
+          "image/png"
+        );
+      };
+      img.onerror = () => reject(new Error("failed to load image"));
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  const scanWithJsQR = (file: File): Promise<string | null> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(img.src);
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(img, 0, 0);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height);
+        resolve(code ? code.data : null);
+      };
+      img.onerror = () => reject(new Error("failed to load image"));
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setError("");
 
+    // Attempt 1: direct scan
     try {
-      const scanner = new Html5Qrcode("qr-file-reader");
-      const result = await scanner.scanFile(file, true);
-      await scanner.clear();
-      onImport(result);
-    } catch (err) {
-      setError("Could not read QR code from the image. Make sure it's a valid QR code." + err);
-    }
+      onImport(await scanFileAttempt(file));
+      return;
+    } catch { /* fall through */ }
+
+    // Attempt 2: preprocess (normalize size + add quiet zone padding) and retry
+    try {
+      const processed = await prepareImage(file);
+      onImport(await scanFileAttempt(processed));
+      return;
+    } catch { /* fall through */ }
+
+    // Attempt 3: jsQR decoder (handles dense Google Auth batch QR codes better)
+    try {
+      const result = await scanWithJsQR(file);
+      if (result) {
+        onImport(result);
+        return;
+      }
+    } catch { /* fall through */ }
+
+    setError("Could not read QR code from the image. Make sure it's a valid QR code.");
   };
 
   const handleClose = async () => {

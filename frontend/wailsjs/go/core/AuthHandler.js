@@ -6,6 +6,10 @@ export function ChangePassword(arg1, arg2) {
   return window['go']['core']['AuthHandler']['ChangePassword'](arg1, arg2);
 }
 
+export function GetAutoLockMinutes() {
+  return window['go']['core']['AuthHandler']['GetAutoLockMinutes']();
+}
+
 export function IsNewUser() {
   return window['go']['core']['AuthHandler']['IsNewUser']();
 }
@@ -16,6 +20,10 @@ export function Login(arg1) {
 
 export function Register(arg1) {
   return window['go']['core']['AuthHandler']['Register'](arg1);
+}
+
+export function SetAutoLockMinutes(arg1) {
+  return window['go']['core']['AuthHandler']['SetAutoLockMinutes'](arg1);
 }
 
 export function Startup(arg1) {

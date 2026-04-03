@@ -4,10 +4,14 @@ import {context} from '../models';
 
 export function ChangePassword(arg1:string,arg2:string):Promise<void>;
 
+export function GetAutoLockMinutes():Promise<number>;
+
 export function IsNewUser():Promise<boolean>;
 
 export function Login(arg1:string):Promise<void>;
 
 export function Register(arg1:string):Promise<void>;
+
+export function SetAutoLockMinutes(arg1:number):Promise<void>;
 
 export function Startup(arg1:context.Context):Promise<void>;

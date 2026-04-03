@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { EntryWithCode } from "./types";
 import SearchBar from "./components/SearchBar";
 import TOTPCard from "./components/TOTPCard";
@@ -9,6 +9,7 @@ import AuthScreen from "./components/AuthScreen";
 import SettingsPage from "./components/SettingsPage";
 import { GetEntries, AddEntry, DeleteEntry } from "../wailsjs/go/core/EntryHandler";
 import { ImportFromURI } from "../wailsjs/go/core/ImportHandler";
+import { GetAutoLockMinutes } from "../wailsjs/go/core/AuthHandler";
 
 function App() {
   const [authenticated, setAuthenticated] = useState(false);
@@ -18,6 +19,40 @@ function App() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<EntryWithCode | null>(null);
   const [page, setPage] = useState<"main" | "settings">("main");
+  const [autoLockMinutes, setAutoLockMinutes] = useState(0);
+  const autoLockTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const resetAutoLock = useCallback(() => {
+    if (autoLockTimer.current) clearTimeout(autoLockTimer.current);
+    if (autoLockMinutes > 0) {
+      autoLockTimer.current = setTimeout(() => {
+        setAuthenticated(false);
+        setEntries([]);
+        setSearch("");
+        setPage("main");
+      }, autoLockMinutes * 60 * 1000);
+    }
+  }, [autoLockMinutes]);
+
+  useEffect(() => {
+    if (!authenticated) {
+      if (autoLockTimer.current) clearTimeout(autoLockTimer.current);
+      return;
+    }
+    GetAutoLockMinutes().then(setAutoLockMinutes).catch(() => {});
+  }, [authenticated]);
+
+  useEffect(() => {
+    if (!authenticated || autoLockMinutes <= 0) return;
+    resetAutoLock();
+    const events = ["pointerdown", "keydown", "scroll"];
+    const handler = () => resetAutoLock();
+    events.forEach((e) => window.addEventListener(e, handler));
+    return () => {
+      if (autoLockTimer.current) clearTimeout(autoLockTimer.current);
+      events.forEach((e) => window.removeEventListener(e, handler));
+    };
+  }, [authenticated, autoLockMinutes, resetAutoLock]);
 
   const refresh = useCallback(async () => {
     try {
@@ -85,7 +120,7 @@ function App() {
   }
 
   if (page === "settings") {
-    return <SettingsPage onBack={() => setPage("main")} />;
+    return <SettingsPage onBack={() => setPage("main")} onAutoLockChange={setAutoLockMinutes} />;
   }
 
   return (

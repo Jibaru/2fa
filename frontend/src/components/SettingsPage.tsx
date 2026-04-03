@@ -1,17 +1,64 @@
-import { useState } from "react";
-import { ChangePassword } from "../../wailsjs/go/core/AuthHandler";
+import { useState, useEffect } from "react";
+import { ChangePassword, GetAutoLockMinutes, SetAutoLockMinutes } from "../../wailsjs/go/core/AuthHandler";
+import TimeInput from "./TimeInput";
+
+function minutesToDHM(total: number): { days: string; hours: string; minutes: string } {
+  if (total <= 0) return { days: "", hours: "", minutes: "" };
+  const d = Math.floor(total / 1440);
+  const h = Math.floor((total % 1440) / 60);
+  const m = total % 60;
+  return { days: d > 0 ? String(d) : "", hours: h > 0 ? String(h) : "", minutes: m > 0 ? String(m) : "" };
+}
+
+function dhmToMinutes(days: string, hours: string, minutes: string): number {
+  const d = parseInt(days) || 0;
+  const h = parseInt(hours) || 0;
+  const m = parseInt(minutes) || 0;
+  return d * 1440 + h * 60 + m;
+}
 
 interface SettingsPageProps {
   onBack: () => void;
+  onAutoLockChange?: (minutes: number) => void;
 }
 
-export default function SettingsPage({ onBack }: SettingsPageProps) {
+export default function SettingsPage({ onBack, onAutoLockChange }: SettingsPageProps) {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const [lockDays, setLockDays] = useState("");
+  const [lockHours, setLockHours] = useState("");
+  const [lockMinutes, setLockMinutes] = useState("");
+  const [lockSaving, setLockSaving] = useState(false);
+  const [lockSuccess, setLockSuccess] = useState("");
+
+  useEffect(() => {
+    GetAutoLockMinutes().then((m) => {
+      const { days, hours, minutes } = minutesToDHM(m);
+      setLockDays(days);
+      setLockHours(hours);
+      setLockMinutes(minutes);
+    }).catch(() => {});
+  }, []);
+
+  const handleSaveAutoLock = async () => {
+    setLockSuccess("");
+    const total = dhmToMinutes(lockDays, lockHours, lockMinutes);
+    setLockSaving(true);
+    try {
+      await SetAutoLockMinutes(total);
+      onAutoLockChange?.(total);
+      setLockSuccess(total === 0 ? "Auto-lock disabled" : "Auto-lock updated");
+    } catch {
+      setLockSuccess("Failed to save");
+    } finally {
+      setLockSaving(false);
+    }
+  };
 
   const handleChangePassword = async () => {
     setError("");
@@ -67,7 +114,7 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
         <h1 className="text-lg font-bold text-gray-800">Settings</h1>
       </div>
 
-      <div className="px-4 pt-4">
+      <div className="px-4 pt-4 space-y-4">
         {/* Change Password Section */}
         <div className="bg-gray-50 rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-4">
@@ -135,6 +182,36 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
               {loading ? "Changing..." : "Change Password"}
             </button>
           </div>
+        </div>
+
+        {/* Auto-Lock Section */}
+        <div className="bg-gray-50 rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-1">
+            <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <h2 className="text-sm font-semibold text-gray-700">Auto-Lock Timer</h2>
+          </div>
+          <p className="text-xs text-gray-400 mb-4">Leave all fields empty to never auto-lock</p>
+
+          <TimeInput
+            days={lockDays}
+            hours={lockHours}
+            minutes={lockMinutes}
+            onChange={(d, h, m) => { setLockDays(d); setLockHours(h); setLockMinutes(m); setLockSuccess(""); }}
+          />
+
+          {lockSuccess && (
+            <p className="text-xs text-green-500 text-center mt-3">{lockSuccess}</p>
+          )}
+
+          <button
+            onClick={handleSaveAutoLock}
+            disabled={lockSaving}
+            className="w-full py-2.5 rounded-xl bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-3"
+          >
+            {lockSaving ? "Saving..." : "Save"}
+          </button>
         </div>
       </div>
     </div>

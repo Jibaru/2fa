@@ -11,7 +11,8 @@ import (
 )
 
 type Config struct {
-	PasswordHash string `json:"password_hash"`
+	PasswordHash    string `json:"password_hash"`
+	AutoLockMinutes int    `json:"auto_lock_minutes"`
 }
 
 type AuthHandler struct {
@@ -85,6 +86,43 @@ func (h *AuthHandler) Login(password string) error {
 
 	h.storage.SetKey([]byte(password))
 	h.storage.Load()
+
+	return nil
+}
+
+func (h *AuthHandler) GetAutoLockMinutes() int {
+	data, err := os.ReadFile(h.configPath)
+	if err != nil {
+		return 0
+	}
+	var config Config
+	if err := json.Unmarshal(data, &config); err != nil {
+		return 0
+	}
+	return config.AutoLockMinutes
+}
+
+func (h *AuthHandler) SetAutoLockMinutes(minutes int) error {
+	data, err := os.ReadFile(h.configPath)
+	if err != nil {
+		return fmt.Errorf("failed to read config: %w", err)
+	}
+
+	var config Config
+	if err := json.Unmarshal(data, &config); err != nil {
+		return fmt.Errorf("failed to parse config: %w", err)
+	}
+
+	config.AutoLockMinutes = minutes
+
+	configData, err := json.MarshalIndent(config, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal config: %w", err)
+	}
+
+	if err := os.WriteFile(h.configPath, configData, 0600); err != nil {
+		return fmt.Errorf("failed to write config: %w", err)
+	}
 
 	return nil
 }

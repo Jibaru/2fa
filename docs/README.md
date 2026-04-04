@@ -34,7 +34,7 @@ A desktop TOTP authenticator built with **Wails** (Go + React + TypeScript), sty
 │   ├── storage.go              # Encrypted CRUD for entries
 │   ├── crypto.go               # AES-128-GCM encrypt/decrypt
 │   ├── totp.go                 # TOTP code generation
-│   ├── entries.go              # EntryHandler (list, add, delete)
+│   ├── entries.go              # EntryHandler (list, add, delete, QR, export/import)
 │   ├── importer.go             # ImportHandler (otpauth + migration URIs)
 │   ├── migration.go            # Google Authenticator protobuf decoder
 │   └── tray.go                 # System tray manager
@@ -49,6 +49,7 @@ A desktop TOTP authenticator built with **Wails** (Go + React + TypeScript), sty
 │           ├── SearchBar.tsx    # Filter entries
 │           ├── AddModal.tsx     # Manual entry or import
 │           ├── ImportModal.tsx  # Webcam / file QR scanning
+│           ├── QRModal.tsx      # Display entry QR code
 │           ├── DeleteModal.tsx  # Confirm deletion
 │           ├── SettingsPage.tsx # Password change + auto-lock
 │           └── TimeInput.tsx    # Days:Hours:Minutes picker

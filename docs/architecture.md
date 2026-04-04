@@ -33,7 +33,7 @@ The `App` struct (`app.go`) has no business logic. All functionality is in dedic
 | Handler         | Responsibility                                       |
 |-----------------|------------------------------------------------------|
 | `AuthHandler`   | Registration, login, password change, auto-lock config |
-| `EntryHandler`  | CRUD operations on TOTP entries, JSON export/import  |
+| `EntryHandler`  | CRUD, QR generation, JSON export/import               |
 | `ImportHandler` | Parse `otpauth://` and `otpauth-migration://` URIs   |
 | `TrayManager`   | System tray icon lifecycle (not bound to frontend)   |
 
@@ -77,6 +77,7 @@ App.tsx
     ├── SearchBar
     ├── TOTPCard[]
     │   └── CircularTimer
+    ├── QRModal           (entry QR code display)
     ├── AddModal
     │   └── (manual form or → ImportModal)
     ├── ImportModal
@@ -130,6 +131,7 @@ The frontend calls Go methods via auto-generated bindings in `frontend/wailsjs/`
 | `github.com/wailsapp/wails/v2` | Desktop framework          |
 | `github.com/energye/systray`   | System tray integration    |
 | `github.com/google/uuid`       | Entry ID generation        |
+| `github.com/skip2/go-qrcode`  | QR code PNG generation     |
 | `golang.org/x/crypto`          | bcrypt password hashing    |
 
 ### Frontend (npm)

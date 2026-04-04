@@ -11,6 +11,8 @@ export function ExportToFile():Promise<void>;
 
 export function GetEntries(arg1:string):Promise<Array<core.EntryWithCode>>;
 
+export function GetEntryQR(arg1:string):Promise<string>;
+
 export function ImportFromFile():Promise<number>;
 
 export function Startup(arg1:context.Context):Promise<void>;

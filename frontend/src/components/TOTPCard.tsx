@@ -6,9 +6,10 @@ interface TOTPCardProps {
   entry: EntryWithCode;
   onCopy: () => void;
   onDelete: () => void;
+  onShowQR: () => void;
 }
 
-export default function TOTPCard({ entry, onCopy, onDelete }: TOTPCardProps) {
+export default function TOTPCard({ entry, onCopy, onDelete, onShowQR }: TOTPCardProps) {
   const [translateX, setTranslateX] = useState(0);
   const [dragging, setDragging] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -88,6 +89,15 @@ export default function TOTPCard({ entry, onCopy, onDelete }: TOTPCardProps) {
             </p>
           </div>
           <div className="flex items-center gap-3 ml-4">
+            <button
+              onClick={onShowQR}
+              className="p-2 rounded-lg hover:bg-gray-100 active:bg-gray-200 transition-colors"
+              title="Show QR code"
+            >
+              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4h4v4H4V4zm12 0h4v4h-4V4zM4 16h4v4H4v-4zm12 4h4v-4h-4v4zM12 4h2v4h-2V4zM4 12h4v2H4v-2zm10 0h6v2h-6v-2zM12 16h2v4h-2v-4zm-2-4h2v2h-2v-2z" />
+              </svg>
+            </button>
             <button
               onClick={handleCopy}
               className="p-2 rounded-lg hover:bg-gray-100 active:bg-gray-200 transition-colors"

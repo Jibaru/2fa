@@ -2,13 +2,16 @@ package core
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	qrcode "github.com/skip2/go-qrcode"
 	wailsRuntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
@@ -75,6 +78,42 @@ func (h *EntryHandler) AddEntry(issuer string, name string, secret string) error
 
 func (h *EntryHandler) DeleteEntry(id string) error {
 	return h.storage.DeleteEntry(id)
+}
+
+func (h *EntryHandler) GetEntryQR(id string) (string, error) {
+	entries := h.storage.GetEntries()
+	var entry *Entry
+	for _, e := range entries {
+		if e.ID == id {
+			entry = &e
+			break
+		}
+	}
+	if entry == nil {
+		return "", fmt.Errorf("entry not found")
+	}
+
+	label := entry.Name
+	if entry.Issuer != "" && entry.Name != "" {
+		label = entry.Issuer + ":" + entry.Name
+	} else if entry.Issuer != "" {
+		label = entry.Issuer
+	}
+
+	uri := fmt.Sprintf("otpauth://totp/%s?secret=%s",
+		url.PathEscape(label),
+		url.QueryEscape(entry.Secret),
+	)
+	if entry.Issuer != "" {
+		uri += "&issuer=" + url.QueryEscape(entry.Issuer)
+	}
+
+	png, err := qrcode.Encode(uri, qrcode.Medium, 256)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate QR: %w", err)
+	}
+
+	return "data:image/png;base64," + base64.StdEncoding.EncodeToString(png), nil
 }
 
 type ExportEntry struct {

@@ -6,6 +6,7 @@
 - A **circular timer** shows remaining seconds (30s period). Turns red when <= 5 seconds.
 - Codes refresh automatically every second.
 - **Copy button** copies the current code to the clipboard.
+- **QR button** displays the entry's `otpauth://totp/` URI as a scannable QR code, so it can be transferred to another authenticator app.
 
 ## Search
 

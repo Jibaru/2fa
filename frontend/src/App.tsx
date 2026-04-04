@@ -7,6 +7,7 @@ import AddModal from "./components/AddModal";
 import ImportModal from "./components/ImportModal";
 import AuthScreen from "./components/AuthScreen";
 import SettingsPage from "./components/SettingsPage";
+import QRModal from "./components/QRModal";
 import { GetEntries, AddEntry, DeleteEntry } from "../wailsjs/go/core/EntryHandler";
 import { ImportFromURI } from "../wailsjs/go/core/ImportHandler";
 import { GetAutoLockMinutes } from "../wailsjs/go/core/AuthHandler";
@@ -18,6 +19,7 @@ function App() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<EntryWithCode | null>(null);
+  const [qrTarget, setQrTarget] = useState<EntryWithCode | null>(null);
   const [page, setPage] = useState<"main" | "settings">("main");
   const [autoLockMinutes, setAutoLockMinutes] = useState(0);
   const autoLockTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -176,6 +178,7 @@ function App() {
               entry={entry}
               onCopy={() => handleCopy(entry.code)}
               onDelete={() => setDeleteTarget(entry)}
+              onShowQR={() => setQrTarget(entry)}
             />
           ))
         )}
@@ -210,6 +213,12 @@ function App() {
           entry={deleteTarget}
           onConfirm={handleDelete}
           onCancel={() => setDeleteTarget(null)}
+        />
+      )}
+      {qrTarget && (
+        <QRModal
+          entry={qrTarget}
+          onClose={() => setQrTarget(null)}
         />
       )}
     </div>

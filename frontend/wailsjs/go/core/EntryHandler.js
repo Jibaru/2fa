@@ -18,6 +18,10 @@ export function GetEntries(arg1) {
   return window['go']['core']['EntryHandler']['GetEntries'](arg1);
 }
 
+export function GetEntryQR(arg1) {
+  return window['go']['core']['EntryHandler']['GetEntryQR'](arg1);
+}
+
 export function ImportFromFile() {
   return window['go']['core']['EntryHandler']['ImportFromFile']();
 }

@@ -7,6 +7,10 @@ export function AddEntry(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function DeleteEntry(arg1:string):Promise<void>;
 
+export function ExportToFile():Promise<void>;
+
 export function GetEntries(arg1:string):Promise<Array<core.EntryWithCode>>;
+
+export function ImportFromFile():Promise<number>;
 
 export function Startup(arg1:context.Context):Promise<void>;

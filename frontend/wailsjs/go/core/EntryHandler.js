@@ -10,8 +10,16 @@ export function DeleteEntry(arg1) {
   return window['go']['core']['EntryHandler']['DeleteEntry'](arg1);
 }
 
+export function ExportToFile() {
+  return window['go']['core']['EntryHandler']['ExportToFile']();
+}
+
 export function GetEntries(arg1) {
   return window['go']['core']['EntryHandler']['GetEntries'](arg1);
+}
+
+export function ImportFromFile() {
+  return window['go']['core']['EntryHandler']['ImportFromFile']();
 }
 
 export function Startup(arg1) {

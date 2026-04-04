@@ -33,7 +33,7 @@ The `App` struct (`app.go`) has no business logic. All functionality is in dedic
 | Handler         | Responsibility                                       |
 |-----------------|------------------------------------------------------|
 | `AuthHandler`   | Registration, login, password change, auto-lock config |
-| `EntryHandler`  | CRUD operations on TOTP entries                      |
+| `EntryHandler`  | CRUD operations on TOTP entries, JSON export/import  |
 | `ImportHandler` | Parse `otpauth://` and `otpauth-migration://` URIs   |
 | `TrayManager`   | System tray icon lifecycle (not bound to frontend)   |
 

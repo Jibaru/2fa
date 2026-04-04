@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { ChangePassword, GetAutoLockMinutes, SetAutoLockMinutes } from "../../wailsjs/go/core/AuthHandler";
+import { ExportToFile, ImportFromFile } from "../../wailsjs/go/core/EntryHandler";
 import TimeInput from "./TimeInput";
 
 function minutesToDHM(total: number): { days: string; hours: string; minutes: string } {
@@ -36,6 +37,10 @@ export default function SettingsPage({ onBack, onAutoLockChange }: SettingsPageP
   const [lockSaving, setLockSaving] = useState(false);
   const [lockSuccess, setLockSuccess] = useState("");
 
+  const [dataMsg, setDataMsg] = useState("");
+  const [dataMsgError, setDataMsgError] = useState(false);
+  const [dataLoading, setDataLoading] = useState(false);
+
   useEffect(() => {
     GetAutoLockMinutes().then((m) => {
       const { days, hours, minutes } = minutesToDHM(m);
@@ -57,6 +62,40 @@ export default function SettingsPage({ onBack, onAutoLockChange }: SettingsPageP
       setLockSuccess("Failed to save");
     } finally {
       setLockSaving(false);
+    }
+  };
+
+  const handleExport = async () => {
+    setDataMsg("");
+    setDataMsgError(false);
+    setDataLoading(true);
+    try {
+      await ExportToFile();
+      setDataMsg("Exported successfully");
+    } catch (err: any) {
+      setDataMsg(String(err || "Export failed"));
+      setDataMsgError(true);
+    } finally {
+      setDataLoading(false);
+    }
+  };
+
+  const handleImport = async () => {
+    setDataMsg("");
+    setDataMsgError(false);
+    setDataLoading(true);
+    try {
+      const count = await ImportFromFile();
+      if (count > 0) {
+        setDataMsg(`Imported ${count} account(s)`);
+      } else {
+        setDataMsg("No new accounts to import");
+      }
+    } catch (err: any) {
+      setDataMsg(String(err || "Import failed"));
+      setDataMsgError(true);
+    } finally {
+      setDataLoading(false);
     }
   };
 
@@ -212,6 +251,38 @@ export default function SettingsPage({ onBack, onAutoLockChange }: SettingsPageP
           >
             {lockSaving ? "Saving..." : "Save"}
           </button>
+        </div>
+
+        {/* Export / Import Section */}
+        <div className="bg-gray-50 rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-1">
+            <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+            </svg>
+            <h2 className="text-sm font-semibold text-gray-700">Export / Import</h2>
+          </div>
+          <p className="text-xs text-gray-400 mb-4">Export saves unencrypted JSON. Import reads it back.</p>
+
+          <div className="flex gap-3">
+            <button
+              onClick={handleExport}
+              disabled={dataLoading}
+              className="flex-1 py-2.5 rounded-xl bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Export
+            </button>
+            <button
+              onClick={handleImport}
+              disabled={dataLoading}
+              className="flex-1 py-2.5 rounded-xl bg-gray-200 text-gray-700 font-medium hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Import
+            </button>
+          </div>
+
+          {dataMsg && (
+            <p className={`text-xs text-center mt-3 ${dataMsgError ? "text-red-500" : "text-green-500"}`}>{dataMsg}</p>
+          )}
         </div>
       </div>
     </div>

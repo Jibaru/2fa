@@ -56,6 +56,10 @@ Accessible via the gear icon in the header.
 - The timer resets on any user interaction (click, keypress, scroll).
 - When it expires, the app locks and returns to the login screen.
 
+### Export / Import
+- **Export** — saves all entries as an **unencrypted JSON** file via a native save dialog. The file contains issuer, name, and secret for each account (no internal IDs).
+- **Import** — reads a previously exported JSON file via a native open dialog. New UUIDs are generated for each entry. Duplicates are skipped automatically.
+
 ## Lock
 
 - **Lock button** (padlock icon next to the settings gear) immediately locks the app.

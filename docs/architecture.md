@@ -1,0 +1,143 @@
+# Architecture
+
+## Overview
+
+The app follows a clean separation between a Go backend and a React frontend, connected through Wails v2 bindings. The Go side handles all business logic (TOTP generation, encryption, storage) while the frontend is purely presentational.
+
+```
+┌──────────────────────────────────────────┐
+│              Wails v2 Runtime             │
+│                                          │
+│  ┌──────────────┐   ┌─────────────────┐  │
+│  │  Go Backend  │◄──│ React Frontend  │  │
+│  │              │──►│                 │  │
+│  │  AuthHandler │   │  App.tsx        │  │
+│  │  EntryHandler│   │  Components/    │  │
+│  │  ImportHandler   │                 │  │
+│  │  TrayManager │   │  Tailwind CSS   │  │
+│  └──────┬───────┘   └─────────────────┘  │
+│         │                                │
+│    ┌────▼─────┐                          │
+│    │ Storage  │  ~/.2fa/data.json        │
+│    │ Config   │  ~/.2fa/config.json      │
+│    └──────────┘                          │
+└──────────────────────────────────────────┘
+```
+
+## Backend (Go)
+
+### Handlers
+
+The `App` struct (`app.go`) has no business logic. All functionality is in dedicated handlers under `core/`:
+
+| Handler         | Responsibility                                       |
+|-----------------|------------------------------------------------------|
+| `AuthHandler`   | Registration, login, password change, auto-lock config |
+| `EntryHandler`  | CRUD operations on TOTP entries                      |
+| `ImportHandler` | Parse `otpauth://` and `otpauth-migration://` URIs   |
+| `TrayManager`   | System tray icon lifecycle (not bound to frontend)   |
+
+All handlers receive the shared `*Storage` instance and a `context.Context` via their `Startup()` method.
+
+### Storage Layer
+
+`Storage` (`core/storage.go`) is a thread-safe (RWMutex) in-memory store backed by an encrypted JSON file:
+
+- **Key management**: `SetKey(key)` sets the AES key (the 16-char password bytes).
+- **Load/Save cycle**: `Load()` reads and decrypts `data.json`; `save()` encrypts and writes.
+- **Deduplication**: `hasSecret()` normalizes and compares secrets to prevent duplicate entries.
+- **Re-keying**: `ReKey(newKey)` atomically re-encrypts all data with a new password.
+
+### TOTP Generation
+
+`core/totp.go` implements RFC 6238 from scratch (no external library):
+
+1. Base32-decode the secret (auto-pads if needed)
+2. Compute HMAC-SHA1 over the 8-byte time counter (`floor(unix_time / 30)`)
+3. Dynamic truncation to 6-digit code
+4. Returns code + remaining seconds in the current period
+
+### Google Authenticator Migration
+
+`core/migration.go` decodes the protobuf payload from `otpauth-migration://offline?data=...` URIs without a protobuf library. It reads wire-format fields manually:
+
+- Field 1 (LEN): repeated OTP parameter messages
+- Each OTP parameter: secret (bytes), name (string), issuer (string), algorithm, digits, type
+
+## Frontend (React + TypeScript)
+
+### Component Tree
+
+```
+App.tsx
+├── AuthScreen        (when !authenticated)
+├── SettingsPage      (when page === "settings")
+│   └── TimeInput
+└── Main view         (default)
+    ├── SearchBar
+    ├── TOTPCard[]
+    │   └── CircularTimer
+    ├── AddModal
+    │   └── (manual form or → ImportModal)
+    ├── ImportModal
+    │   └── (webcam / file scanning)
+    └── DeleteModal
+```
+
+### State Management
+
+All state lives in `App.tsx` via React hooks:
+
+- `authenticated` — gates the entire UI
+- `entries` — refreshed every 1 second via `setInterval`
+- `search` — filters entries in real-time
+- `autoLockMinutes` — inactivity timer duration
+- `page` — switches between `"main"` and `"settings"`
+
+### Auto-Lock Timer
+
+When `autoLockMinutes > 0`:
+1. A `setTimeout` is set for `autoLockMinutes * 60 * 1000` ms
+2. User activity events (`pointerdown`, `keydown`, `scroll`) reset the timer
+3. When the timer fires, the app locks (clears state, shows AuthScreen)
+
+## Wails Wiring (`main.go`)
+
+```go
+wails.Run(&options.App{
+    OnStartup: func(ctx context.Context) {
+        // Initialize all handlers with context
+    },
+    OnBeforeClose: func(ctx context.Context) bool {
+        // Delegates to TrayManager: hide to tray instead of quit
+    },
+    Bind: []interface{}{
+        authHandler,
+        entryHandler,
+        importHandler,
+    },
+})
+```
+
+The frontend calls Go methods via auto-generated bindings in `frontend/wailsjs/` (generated by Wails, not checked in).
+
+## Dependencies
+
+### Go
+
+| Package                        | Purpose                    |
+|--------------------------------|----------------------------|
+| `github.com/wailsapp/wails/v2` | Desktop framework          |
+| `github.com/energye/systray`   | System tray integration    |
+| `github.com/google/uuid`       | Entry ID generation        |
+| `golang.org/x/crypto`          | bcrypt password hashing    |
+
+### Frontend (npm)
+
+| Package         | Purpose                              |
+|-----------------|--------------------------------------|
+| `react`         | UI framework                         |
+| `html5-qrcode`  | Webcam QR scanning (zxing-based)    |
+| `jsqr`          | Fallback QR decoder for dense codes |
+| `tailwindcss`   | Utility-first CSS                    |
+| `vite`          | Build tooling                        |

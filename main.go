@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"embed"
+	"runtime"
 
 	"2fa/core"
 
@@ -23,9 +24,12 @@ func main() {
 	authHandler := core.NewAuthHandler(storage)
 	entryHandler := core.NewEntryHandler(storage)
 	importHandler := core.NewImportHandler(storage)
-	trayManager := core.NewTrayManager(trayIcon)
+	var trayManager *core.TrayManager
 
-	trayManager.Start()
+	if runtime.GOOS == "windows" {
+		trayManager = core.NewTrayManager(trayIcon)
+		trayManager.Start()
+	}
 
 	err := wails.Run(&options.App{
 		Title:  "2FA Authenticator",
@@ -40,10 +44,15 @@ func main() {
 			authHandler.Startup(ctx)
 			entryHandler.Startup(ctx)
 			importHandler.Startup(ctx)
-			trayManager.Startup(ctx)
+			if trayManager != nil {
+				trayManager.Startup(ctx)
+			}
 		},
 		OnBeforeClose: func(ctx context.Context) (prevent bool) {
-			return trayManager.OnBeforeClose(ctx)
+			if trayManager != nil {
+				return trayManager.OnBeforeClose(ctx)
+			}
+			return false
 		},
 		Bind: []interface{}{
 			authHandler,
